@@ -174,7 +174,7 @@
 
     <script>
       // ▼▼▼▼▼【重要】「新しいデプロイ」で取得したウェブアプリのURLに必ず置き換えてください▼▼▼▼▼
-      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbww4k3ld87tg4ml16psctvouFPVl_yWLv5mXlKn2Ys8DVC0jQTKgygcs3f3i34iOaZF/exec';
+      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwu1q0qHgdka5u7-9QEkGmKomMz95s_KbunaHUHasOuCedqlxmw9Rq_B3ykOFe5yYha/exec';
       // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       // --- UI制御 ---
@@ -204,16 +204,17 @@
           return true;
       }
 
-      // --- API通信 (GETに統一) ---
-      async function apiRequest(params) {
+      // --- API通信 (GETに統一した新しい関数) ---
+      async function apiRequest(payload) {
         if (!isApiUrlValid()) return null;
         showProgress();
         try {
-            const url = new URL(WEB_APP_URL);
-            for(const key in params) {
-                url.searchParams.append(key, params[key]);
-            }
-            const response = await fetch(url);
+            const stringifiedPayload = JSON.stringify(payload);
+            const encodedPayload = encodeURIComponent(stringifiedPayload);
+            const url = `${WEB_APP_URL}?p=${encodedPayload}`;
+
+            const response = await fetch(url, { method: 'GET' });
+
             if (!response.ok) {
                 throw new Error(`サーバーエラーが発生しました (Status: ${response.status})`);
             }
@@ -268,7 +269,7 @@
       async function updateCheckbox() {
         const checkboxes = document.querySelectorAll('#result input[type="checkbox"]');
         if (checkboxes.length === 0) {
-            alert("更新する教室がありません。「教室を表示」ボタンを押してください。");
+            showToast("更新する教室がありません。「教室を表示」ボタンを押してください。", true);
             return;
         }
         
@@ -281,7 +282,7 @@
         const result = await apiRequest({ 
             action: 'updateCheckboxData', 
             searchKey: searchKey,
-            checkedValues: JSON.stringify(checkedValues) 
+            checkedValues: checkedValues
         });
 
         if(result && result.message) {
@@ -293,7 +294,7 @@
       function uploadCsv() {
         const fileInput = document.getElementById('csvFile');
         const file = fileInput.files[0];
-        if (!file) { alert('CSVファイルを選択してください。'); return; }
+        if (!file) { showToast('CSVファイルを選択してください。', true); return; }
 
         const reader = new FileReader();
         reader.onload = async (event) => {
