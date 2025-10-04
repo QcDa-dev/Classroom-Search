@@ -173,7 +173,7 @@
     </div>
 
     <script>
-      // ▼▼▼▼▼【重要】ここに、GASでデプロイしたウェブアプリのURLを必ず貼り付けてください▼▼▼▼▼
+      // ▼▼▼▼▼【重要】「新しいデプロイ」で取得したウェブアプリのURLに必ず置き換えてください▼▼▼▼▼
       const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx_yoKBK3R8fxvZvXQxRAqP0ydHm3Onmox2Z9mEHrodd2Q9XhfV87Yc3Ldc2qggOU4/exec';
       // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
@@ -197,7 +197,7 @@
 
       // --- API URLのチェック関数 ---
       function isApiUrlValid() {
-          if (!WEB_APP_URL || WEB_APP_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+          if (!WEB_APP_URL || WEB_APP_URL === 'YOUR_NEW_GAS_WEB_APP_URL_HERE') {
               showToast('APIのURLが設定されていません。index.htmlファイルを修正してください。', true);
               return false;
           }
@@ -215,8 +215,11 @@
                 url.searchParams.append(key, params[key]);
             }
             const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`サーバーエラーが発生しました (Status: ${response.status})`);
+            }
             const result = await response.json();
-            if (!response.ok || !result.success) throw new Error(result.message || `HTTP error! status: ${response.status}`);
+            if (!result.success) throw new Error(result.message || `APIからエラーが返されました`);
             return result.data;
         } catch (error) {
             console.error('API GET Error:', error);
@@ -234,14 +237,17 @@
               const response = await fetch(WEB_APP_URL, {
                   method: 'POST',
                   headers: {
-                      'Content-Type': 'text/plain;charset=utf-8', // CORS preflightを回避するため
+                      'Content-Type': 'text/plain;charset=utf-8',
                   },
                   body: JSON.stringify({ action, ...body })
               });
               
+              if (!response.ok) {
+                 throw new Error(`サーバーエラーが発生しました (Status: ${response.status})`);
+              }
               const result = await response.json();
-              if (!response.ok || !result.success) {
-                  throw new Error(result.message || `HTTP error! status: ${response.status}`);
+              if (!result.success) {
+                  throw new Error(result.message || `APIからエラーが返されました`);
               }
               return result.data;
 
