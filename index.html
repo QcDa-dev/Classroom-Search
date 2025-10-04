@@ -90,6 +90,7 @@
           position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
           color: white; padding: 12px 25px; border-radius: 5px; z-index: 1001;
           opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s, bottom 0.3s;
+          max-width: 90%;
       }
       #toastNotification.show { opacity: 1; visibility: visible; bottom: 30px; }
       #toastNotification.success { background-color: var(--success-color); }
@@ -191,12 +192,12 @@
         const toast = document.getElementById('toastNotification');
         toast.textContent = message;
         toast.className = 'show ' + (isError ? 'error' : 'success');
-        setTimeout(() => { toast.className = ''; }, 4000); // メッセージ表示時間を少し延長
+        setTimeout(() => { toast.className = ''; }, 5000);
       }
 
       // --- API URLのチェック関数 ---
       function isApiUrlValid() {
-          if (!WEB_APP_URL || WEB_APP_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+          if (!WEB_APP_URL || WEB_APP_URL === '') {
               showToast('APIのURLが設定されていません。index.htmlファイルを修正してください。', true);
               return false;
           }
@@ -214,13 +215,12 @@
                 url.searchParams.append(key, params[key]);
             }
             const response = await fetch(url);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const result = await response.json();
-            if (!result.success) throw new Error(result.message);
+            if (!response.ok || !result.success) throw new Error(result.message || `HTTP error! status: ${response.status}`);
             return result.data;
         } catch (error) {
             console.error('API GET Error:', error);
-            showToast('エラーが発生しました: ' + error.message, true);
+            showToast('エラー: ' + error.message, true);
             return null;
         } finally {
             hideProgress();
@@ -233,26 +233,19 @@
           try {
               const response = await fetch(WEB_APP_URL, {
                   method: 'POST',
-                  headers: {
-                      'Content-Type': 'text/plain;charset=utf-8', // ヘッダーを単純化
-                  },
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ action, ...body })
               });
               
-              if (!response.ok) {
-                  const errorText = await response.text();
-                  throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-              }
-              
               const result = await response.json();
-              if (!result.success) {
-                  throw new Error(result.message);
+              if (!response.ok || !result.success) {
+                  throw new Error(result.message || `HTTP error! status: ${response.status}`);
               }
               return result.data;
 
           } catch (error) {
               console.error('API POST Error:', error);
-              showToast('エラーが発生しました: ' + error.message, true);
+              showToast('エラー: ' + error.message, true);
               return null;
           } finally {
               hideProgress();
@@ -303,14 +296,12 @@
         }
         
         const checkedValues = [];
-        const uncheckedValues = [];
         checkboxes.forEach(cb => {
-          if (cb.checked) { checkedValues.push(cb.value); } 
-          else { uncheckedValues.push(cb.value); }
+          if (cb.checked) { checkedValues.push(cb.value); }
         });
         
         const searchKey = document.getElementById('UPDATEsearchInput').value;
-        const result = await apiPost('updateCheckboxData', { searchKey, checkedValues, uncheckedValues });
+        const result = await apiPost('updateCheckboxData', { searchKey, checkedValues });
         if(result && result.message) {
             showToast(result.message);
             document.getElementById('result').innerHTML = '';
