@@ -174,7 +174,7 @@
 
     <script>
       // ▼▼▼▼▼【重要】「新しいデプロイ」で取得したウェブアプリのURLに必ず置き換えてください▼▼▼▼▼
-      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx_yoKBK3R8fxvZvXQxRAqP0ydHm3Onmox2Z9mEHrodd2Q9XhfV87Yc3Ldc2qggOU4/exec';
+      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbww4k3ld87tg4ml16psctvouFPVl_yWLv5mXlKn2Ys8DVC0jQTKgygcs3f3i34iOaZF/exec';
       // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       // --- UI制御 ---
@@ -204,13 +204,12 @@
           return true;
       }
 
-      // --- API通信 ---
-      async function apiGet(action, params) {
+      // --- API通信 (GETに統一) ---
+      async function apiRequest(params) {
         if (!isApiUrlValid()) return null;
         showProgress();
         try {
             const url = new URL(WEB_APP_URL);
-            url.searchParams.append('action', action);
             for(const key in params) {
                 url.searchParams.append(key, params[key]);
             }
@@ -222,7 +221,7 @@
             if (!result.success) throw new Error(result.message || `APIからエラーが返されました`);
             return result.data;
         } catch (error) {
-            console.error('API GET Error:', error);
+            console.error('API Request Error:', error);
             showToast('エラー: ' + error.message, true);
             return null;
         } finally {
@@ -230,40 +229,10 @@
         }
       }
 
-      async function apiPost(action, body) {
-          if (!isApiUrlValid()) return null;
-          showProgress();
-          try {
-              const response = await fetch(WEB_APP_URL, {
-                  method: 'POST',
-                  headers: {
-                      'Content-Type': 'text/plain;charset=utf-8',
-                  },
-                  body: JSON.stringify({ action, ...body })
-              });
-              
-              if (!response.ok) {
-                 throw new Error(`サーバーエラーが発生しました (Status: ${response.status})`);
-              }
-              const result = await response.json();
-              if (!result.success) {
-                  throw new Error(result.message || `APIからエラーが返されました`);
-              }
-              return result.data;
-
-          } catch (error) {
-              console.error('API POST Error:', error);
-              showToast('エラー: ' + error.message, true);
-              return null;
-          } finally {
-              hideProgress();
-          }
-      }
-
       // --- イベントハンドラ ---
       async function searchD() {
         const searchKey = document.getElementById('searchInput').value;
-        const data = await apiGet('searchDate', { searchKey });
+        const data = await apiRequest({ action: 'searchDate', searchKey: searchKey });
         if (data !== null) {
           document.getElementById('resultD').innerText = data;
         }
@@ -271,7 +240,7 @@
 
       async function searchR() {
         const searchKey = document.getElementById('searchInputR').value;
-        const data = await apiGet('searchRoom', { searchKey });
+        const data = await apiRequest({ action: 'searchRoom', searchKey: searchKey });
         if (data !== null) {
           document.getElementById('resultR').innerText = data;
         }
@@ -279,7 +248,7 @@
       
       async function displayCheckbox(){
         const searchKey = document.getElementById('UPDATEsearchInput').value;
-        const data = await apiGet('displayCheckboxes', { searchKey });
+        const data = await apiRequest({ action: 'displayCheckboxes', searchKey: searchKey });
         if (data) {
             const container = document.getElementById('result');
             container.innerHTML = '';
@@ -309,7 +278,12 @@
         });
         
         const searchKey = document.getElementById('UPDATEsearchInput').value;
-        const result = await apiPost('updateCheckboxData', { searchKey, checkedValues });
+        const result = await apiRequest({ 
+            action: 'updateCheckboxData', 
+            searchKey: searchKey,
+            checkedValues: JSON.stringify(checkedValues) 
+        });
+
         if(result && result.message) {
             showToast(result.message);
             document.getElementById('result').innerHTML = '';
@@ -324,7 +298,10 @@
         const reader = new FileReader();
         reader.onload = async (event) => {
           const csvContent = event.target.result;
-          const result = await apiPost('processCsv', { csvContent });
+          const result = await apiRequest({
+              action: 'processCsv',
+              csvContent: csvContent
+          });
           if(result && result.message) {
              showToast(result.message);
              fileInput.value = '';
