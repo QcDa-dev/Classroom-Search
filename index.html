@@ -173,7 +173,7 @@
 
     <script>
       // ▼▼▼▼▼【重要】ここに、ステップ2でコピーしたウェブアプリのURLを貼り付けてください▼▼▼▼▼
-      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx_yoKBK3R8fxvZvXQxRAqP0ydHm3Onmox2Z9mEHrodd2Q9XhfV87Yc3Ldc2qggOU4/exec';
+      const WEB_APP_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
       // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       // --- UI制御 ---
@@ -223,14 +223,22 @@
           try {
               const response = await fetch(WEB_APP_URL, {
                   method: 'POST',
-                  mode: 'no-cors', // これが必要な場合があります
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                      'Content-Type': 'application/json',
+                  },
                   body: JSON.stringify({ action, ...body })
               });
               
-              // no-corsモードではレスポンスの中身を確認できないため、成功したと仮定する
-              // 実際にはGAS側でリダイレクトを返すことで成功をハンドリングする高度な手法もある
-              return { message: "リクエストを送信しました。処理には時間がかかる場合があります。" };
+              if (!response.ok) {
+                  const errorText = await response.text();
+                  throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+              }
+              
+              const result = await response.json();
+              if (!result.success) {
+                  throw new Error(result.message);
+              }
+              return result.data;
 
           } catch (error) {
               console.error('API POST Error:', error);
@@ -245,7 +253,7 @@
       async function searchD() {
         const searchKey = document.getElementById('searchInput').value;
         const data = await apiGet('searchDate', { searchKey });
-        if (data) {
+        if (data !== null) {
           document.getElementById('resultD').innerText = data;
         }
       }
@@ -253,7 +261,7 @@
       async function searchR() {
         const searchKey = document.getElementById('searchInputR').value;
         const data = await apiGet('searchRoom', { searchKey });
-        if (data) {
+        if (data !== null) {
           document.getElementById('resultR').innerText = data;
         }
       }
@@ -293,8 +301,8 @@
         
         const searchKey = document.getElementById('UPDATEsearchInput').value;
         const result = await apiPost('updateCheckboxData', { searchKey, checkedValues, uncheckedValues });
-        if(result) {
-            showToast("手動更新のリクエストを送信しました。");
+        if(result && result.message) {
+            showToast(result.message);
             document.getElementById('result').innerHTML = '';
         }
       }
@@ -308,8 +316,8 @@
         reader.onload = async (event) => {
           const csvContent = event.target.result;
           const result = await apiPost('processCsv', { csvContent });
-          if(result) {
-             showToast("CSV更新のリクエストを送信しました。");
+          if(result && result.message) {
+             showToast(result.message);
              fileInput.value = '';
           }
         };
