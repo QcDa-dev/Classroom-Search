@@ -174,7 +174,7 @@
 
     <script>
       // ▼▼▼▼▼【重要】「新しいデプロイ」で取得したウェブアプリのURLに必ず置き換えてください▼▼▼▼▼
-      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzjnpAVC3FEC0lE6_4kQ4WvVnPq-Zico76NS1rhr9NIaWaGNBmOItmmXgLekAx5QKfw/exec';
+      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyRW6q-TZ12IO7fOkTItqh3dOB926r8EMD3Prs7v5U6bBrCcOj5ETLFRDcuVIEJbr88/exec';
       // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       // --- UI制御 ---
@@ -204,17 +204,29 @@
           return true;
       }
 
-      // --- API通信 (POSTに統一した新しい関数) ---
+      // --- API通信 (最終FIX版) ---
       async function apiRequest(payload) {
         if (!isApiUrlValid()) return null;
         showProgress();
         try {
+            // ブラウザがOPTIONSメソッドで事前確認(Preflight)リクエストを送る可能性があるため、それに対応
+            const preflightResponse = await fetch(WEB_APP_URL, {
+                method: 'OPTIONS',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({type: 'OPTIONS'})
+            });
+
+            if (!preflightResponse.ok) {
+                 throw new Error(`サーバーの事前確認に失敗しました (Status: ${preflightResponse.status})`);
+            }
+
+            // 本番のリクエスト
             const response = await fetch(WEB_APP_URL, {
                 method: 'POST',
-                mode: 'cors', // CORSモードを指定
+                mode: 'cors',
                 headers: {
-                    // このヘッダはプリフライトを発生させない「単純なリクエスト」にするために重要
-                    'Content-Type': 'text/plain;charset=utf-8', 
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload)
             });
