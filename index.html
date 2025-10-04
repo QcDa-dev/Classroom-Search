@@ -172,8 +172,8 @@
     </div>
 
     <script>
-      // ▼▼▼▼▼【重要】ここに、ステップ2でコピーしたウェブアプリのURLを貼り付けてください▼▼▼▼▼
-      const WEB_APP_URL = 'YOUR_GAS_WEB_APP_URL_HERE';
+      // ▼▼▼▼▼【重要】ここに、GASでデプロイしたウェブアプリのURLを必ず貼り付けてください▼▼▼▼▼
+      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx_yoKBK3R8fxvZvXQxRAqP0ydHm3Onmox2Z9mEHrodd2Q9XhfV87Yc3Ldc2qggOU4/exec';
       // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       // --- UI制御 ---
@@ -191,19 +191,28 @@
         const toast = document.getElementById('toastNotification');
         toast.textContent = message;
         toast.className = 'show ' + (isError ? 'error' : 'success');
-        setTimeout(() => { toast.className = ''; }, 3000);
+        setTimeout(() => { toast.className = ''; }, 4000); // メッセージ表示時間を少し延長
+      }
+
+      // --- API URLのチェック関数 ---
+      function isApiUrlValid() {
+          if (!WEB_APP_URL || WEB_APP_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+              showToast('APIのURLが設定されていません。index.htmlファイルを修正してください。', true);
+              return false;
+          }
+          return true;
       }
 
       // --- API通信 ---
       async function apiGet(action, params) {
-        const url = new URL(WEB_APP_URL);
-        url.searchParams.append('action', action);
-        for(const key in params) {
-            url.searchParams.append(key, params[key]);
-        }
-        
+        if (!isApiUrlValid()) return null;
         showProgress();
         try {
+            const url = new URL(WEB_APP_URL);
+            url.searchParams.append('action', action);
+            for(const key in params) {
+                url.searchParams.append(key, params[key]);
+            }
             const response = await fetch(url);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const result = await response.json();
@@ -219,12 +228,13 @@
       }
 
       async function apiPost(action, body) {
+          if (!isApiUrlValid()) return null;
           showProgress();
           try {
               const response = await fetch(WEB_APP_URL, {
                   method: 'POST',
                   headers: {
-                      'Content-Type': 'application/json',
+                      'Content-Type': 'text/plain;charset=utf-8', // ヘッダーを単純化
                   },
                   body: JSON.stringify({ action, ...body })
               });
