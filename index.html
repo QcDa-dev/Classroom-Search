@@ -174,7 +174,7 @@
 
     <script>
       // ▼▼▼▼▼【重要】「新しいデプロイ」で取得したウェブアプリのURLに必ず置き換えてください▼▼▼▼▼
-      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyRW6q-TZ12IO7fOkTItqh3dOB926r8EMD3Prs7v5U6bBrCcOj5ETLFRDcuVIEJbr88/exec';
+      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwu1q0qHgdka5u7-9QEkGmKomMz95s_KbunaHUHasOuCedqlxmw9Rq_B3ykOFe5yYha/exec';
       // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
       // --- UI制御 ---
@@ -203,48 +203,69 @@
           }
           return true;
       }
-
-      // --- API通信 (最終FIX版) ---
-      async function apiRequest(payload) {
-        if (!isApiUrlValid()) return null;
+      
+      // --- API通信 (JSONP方式) ---
+      function apiRequest(payload) {
+        if (!isApiUrlValid()) return Promise.resolve(null);
         showProgress();
-        try {
-            // ブラウザがOPTIONSメソッドで事前確認(Preflight)リクエストを送る可能性があるため、それに対応
-            const preflightResponse = await fetch(WEB_APP_URL, {
-                method: 'OPTIONS',
-                mode: 'cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({type: 'OPTIONS'})
-            });
 
-            if (!preflightResponse.ok) {
-                 throw new Error(`サーバーの事前確認に失敗しました (Status: ${preflightResponse.status})`);
+        let timeoutId = null;
+
+        return new Promise((resolve, reject) => {
+            const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+
+            window[callbackName] = (result) => {
+                clearTimeout(timeoutId);
+                cleanup();
+                if (result && result.success) {
+                    resolve(result.data);
+                } else {
+                    const errorMessage = result ? result.message : '不明なエラーが発生しました';
+                    reject(new Error(errorMessage));
+                }
+            };
+
+            const cleanup = () => {
+                const script = document.getElementById(callbackName);
+                if (script) {
+                    script.parentNode.removeChild(script);
+                }
+                delete window[callbackName];
+            };
+            
+            const stringifiedPayload = JSON.stringify(payload);
+            const encodedPayload = encodeURIComponent(stringifiedPayload);
+            const url = `${WEB_APP_URL}?callback=${callbackName}&p=${encodedPayload}`;
+            
+            if (url.length > 2000) {
+                 reject(new Error('リクエストが長すぎます。CSVファイルのサイズを小さくしてください。'));
+                 return;
             }
 
-            // 本番のリクエスト
-            const response = await fetch(WEB_APP_URL, {
-                method: 'POST',
-                mode: 'cors',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            });
+            timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error('サーバーからの応答がありませんでした（タイムアウト）。'));
+            }, 15000);
 
-            if (!response.ok) {
-                throw new Error(`サーバーエラーが発生しました (Status: ${response.status})`);
-            }
-            const result = await response.json();
-            if (!result.success) throw new Error(result.message || `APIからエラーが返されました`);
-            return result.data;
-        } catch (error) {
+            const script = document.createElement('script');
+            script.id = callbackName;
+            script.src = url;
+            script.onerror = () => {
+                clearTimeout(timeoutId);
+                cleanup();
+                reject(new Error('スクリプトの読み込みに失敗しました。URLやネットワークを確認してください。'));
+            };
+            document.head.appendChild(script);
+
+        }).catch(error => {
             console.error('API Request Error:', error);
             showToast('エラー: ' + error.message, true);
             return null;
-        } finally {
+        }).finally(() => {
             hideProgress();
-        }
+        });
       }
+
 
       // --- イベントハンドラ ---
       async function searchD() {
@@ -330,4 +351,3 @@
     </script>
 </body>
 </html>
-
