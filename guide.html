@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使い方ガイド | QcDa Project</title>
+    
+    <!-- アイコン設定 -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+
+    <!-- 共通スタイルシート -->
+    <link rel="stylesheet" href="common.css">
+    
+    <style>
+        .guide-section {
+            margin-bottom: 30px;
+        }
+        .guide-section h3 {
+            font-size: 1.1rem;
+            color: var(--qcda-primary);
+            border-left: 4px solid var(--qcda-primary);
+            padding-left: 10px;
+            margin-bottom: 15px;
+        }
+        .guide-section p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--qcda-text-main);
+            margin-bottom: 10px;
+        }
+        .guide-section ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+        .guide-section li {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 5px;
+        }
+        .step-box {
+            background-color: var(--qcda-bg-color);
+            border: 1px solid var(--qcda-border);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .step-number {
+            display: inline-block;
+            background-color: var(--qcda-primary);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            text-align: center;
+            line-height: 24px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+    </style>
+
+    <!-- 共通スクリプト -->
+    <script type="module" src="common.js" defer></script>
+</head>
+<body>
+    <main>
+        <div class="card">
+            <h2 style="font-size: 1.2rem; border-bottom: 2px solid var(--qcda-border); padding-bottom: 10px; margin-bottom: 20px;">
+                使い方ガイド
+            </h2>
+
+            <div class="guide-section">
+                <h3>空き教室の探し方</h3>
+                <p>空き教室検索は、指定した時間帯に授業が行われていない教室を素早く見つけるための機能です。</p>
+                
+                <div class="step-box">
+                    <p><span class="step-number">1</span><strong>条件を指定する</strong></p>
+                    <p>検索画面で以下の項目をプルダウンから選択します。</p>
+                    <ul>
+                        <li><strong>建物：</strong> 検索したい号館（例：1号、6号）</li>
+                        <li><strong>開講時期：</strong> 前期 または 後期</li>
+                        <li><strong>曜日・時限：</strong> 空き状況を知りたい曜日と時間</li>
+                    </ul>
+                </div>
+
+                <div class="step-box">
+                    <p><span class="step-number">2</span><strong>検索を実行する</strong></p>
+                    <p>「空き教室を検索」ボタンをタップします。</p>
+                </div>
+
+                <div class="step-box">
+                    <p><span class="step-number">3</span><strong>結果を確認する</strong></p>
+                    <p>条件に一致する空き教室がある場合、教室番号が青いバッジで一覧表示されます。授業等で全て埋まっている場合は「該当する条件の空き教室はありません」と表示されます。</p>
+                </div>
+            </div>
+
+            <div class="guide-section">
+                <h3>データについて</h3>
+                <p>本アプリのデータは、大学が公開している時間割データを基にQcDa Projectが独自に集計・登録したものです。実際の使用状況（休講、教室変更、突発的なイベントなど）は反映されていない場合がありますので、参考情報としてご活用ください。</p>
+            </div>
+
+            <div class="text-center" style="margin-top: 30px;">
+                <a href="search.html" class="btn">検索画面へ</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
