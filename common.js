@@ -29,17 +29,22 @@ const URL_TERMS = "https://qcda-dev.github.io/HP/terms-of-service.html";
 const URL_COMMUNITY = "https://qcda-dev.github.io/HP/community-guidelines.html";
 const URL_CONTACT = "https://docs.google.com/forms/d/e/1FAIpQLSdlvIr5ehyy3dInl_XTkA5F64H7yFIigL2dzFW0IoXnl8ajdw/viewform?usp=dialog";
 
-// --- DOM操作 (ページ読み込み完了時) ---
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. ヘッダーとハンバーガーメニューのDOM構築
+// --- DOM操作 ---
+function initDOM() {
+    // 多重実行を防止するためのチェック
+    if (document.getElementById('headerAppTitle')) return; 
+    
     buildHeaderAndMenu();
-
-    // 2. フッターのDOM構築
     buildFooter();
-
-    // 3. イベントリスナーの設定
     setupEventListeners();
-});
+}
+
+// モジュール読み込みのタイミングに関わらず確実にDOMを初期化する
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDOM);
+} else {
+    initDOM();
+}
 
 function buildHeaderAndMenu() {
     // ヘッダー作成
