@@ -1,355 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <base target="_top">
-    <title>教室検索</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-      :root {
-          --primary-color: #007BFF;
-          --primary-hover-color: #0056b3;
-          --secondary-color: #6c757d;
-          --secondary-hover-color: #545b62;
-          --background-color: #f4f7f9;
-          --card-background-color: #ffffff;
-          --text-color: #333;
-          --border-color: #dee2e6;
-          --success-color: #28a745;
-          --error-color: #dc3545;
-          --border-radius: 8px;
-          --box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      }
-      body {
-          font-family: 'Roboto', sans-serif; background-color: var(--background-color);
-          color: var(--text-color); margin: 0; padding: 15px; font-size: 16px;
-      }
-      .app-container { max-width: 650px; margin: 0 auto; }
-      .hidden { display: none; }
-      .app-header { text-align: center; margin-bottom: 25px; }
-      .app-header h1 { font-size: 26px; color: var(--text-color); font-weight: 500; }
-      .card {
-          background-color: var(--card-background-color); border-radius: var(--border-radius);
-          padding: 20px 25px; margin-bottom: 20px; box-shadow: var(--box-shadow);
-      }
-      .card h2 {
-          margin-top: 0; margin-bottom: 20px; font-size: 20px; font-weight: 500;
-          border-bottom: 1px solid var(--border-color); padding-bottom: 10px;
-      }
-      .card p { margin-top: 0; margin-bottom: 15px; line-height: 1.6; color: #555; }
-      .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
-      select {
-          flex-grow: 1; padding: 10px; font-size: 16px; border: 1px solid var(--border-color);
-          border-radius: 5px; background-color: #fff; appearance: none;
-          background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
-          background-repeat: no-repeat; background-position: right 10px top 50%; background-size: .65em auto;
-      }
-      button {
-          padding: 10px 20px; font-size: 16px; color: #fff; background-color: var(--primary-color);
-          border: none; border-radius: 5px; cursor: pointer;
-          transition: background-color 0.2s ease, box-shadow 0.2s ease;
-          font-weight: 500; white-space: nowrap;
-      }
-      button:hover { background-color: var(--primary-hover-color); box-shadow: 0 2px 5px rgba(0,0,0,0.15); }
-      .secondary-button { background-color: var(--secondary-color); }
-      .secondary-button:hover { background-color: var(--secondary-hover-color); }
-      .button-group { display: flex; justify-content: space-between; align-items: center; margin-top: 25px; }
-      .result-box {
-          margin-top: 15px; padding: 15px; background-color: #e9ecef; border-radius: 5px;
-          min-height: 25px; font-size: 18px; font-weight: 500; word-wrap: break-word;
-      }
-      .checkbox-container {
-          max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color);
-          padding: 15px; border-radius: 5px; min-height: 50px;
-      }
-      .checkbox-container label {
-          display: block; margin-bottom: 12px; font-size: 18px; cursor: pointer;
-          transition: background-color 0.2s; padding: 5px; border-radius: 4px;
-      }
-      .checkbox-container label:hover { background-color: #f0f0f0; }
-      .checkbox-container input[type="checkbox"] { margin-right: 12px; transform: scale(1.2); vertical-align: middle; }
-      .text-center { text-align: center; }
-      .file-input {
-          display: block; width: 100%; padding: 10px; font-size: 16px;
-          border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box;
-      }
-      #progressIndicator {
-          position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-          background-color: rgba(255, 255, 255, 0.8); z-index: 1000;
-          display: none; justify-content: center; align-items: center;
-      }
-      .spinner {
-          border: 5px solid #f3f3f3; border-top: 5px solid var(--primary-color);
-          border-radius: 50%; width: 40px; height: 40px;
-          animation: spin 1s linear infinite;
-      }
-      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-      #toastNotification {
-          position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-          color: white; padding: 12px 25px; border-radius: 5px; z-index: 1001;
-          opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s, bottom 0.3s;
-          max-width: 90%;
-      }
-      #toastNotification.show { opacity: 1; visibility: visible; bottom: 30px; }
-      #toastNotification.success { background-color: var(--success-color); }
-      #toastNotification.error { background-color: var(--error-color); }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教室検索 | QcDa Project</title>
+    <meta name="description" content="大学の空き教室を簡単に検索できるツールです。建物、曜日、時限を指定して素早く空き状況を確認できます。">
+    <meta name="keywords" content="教室検索, 空き教室, 時間割, 大学, QcDa Project">
+    
+    <!-- アイコン設定 -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+
+    <!-- 共通スタイルシート -->
+    <link rel="stylesheet" href="common.css">
+
+    <!-- モジュールとして読み込む (Firebaseを使用するため) -->
+    <script type="module" src="common.js" defer></script>
 </head>
 <body>
+    <!-- ヘッダーとハンバーガーメニュー、フッターは common.js で自動生成されます -->
 
-    <div id="progressIndicator"><div class="spinner"></div></div>
-    <div id="toastNotification"></div>
-
-    <div class="app-container">
-        <!-- ===== メイン画面 ===== -->
-        <div id="MainScreen">
-            <header class="app-header"><h1>6号館 空き教室検索</h1></header>
-            <h3 style="text-align: center;">2026年度 後期</h3>
-            <div class="card">
-                <h2>時間で検索</h2>
-                <div class="input-group">
-                    <select id="searchInput">
-                      <option>月1</option><option>月2</option><option>月3</option><option>月4</option><option>月5</option><option>月6</option>
-                      <option>火1</option><option>火2</option><option>火3</option><option>火4</option><option>火5</option><option>火6</option>
-                      <option>水1</option><option>水2</option><option>水3</option><option>水4</option><option>水5</option><option>水6</option>
-                      <option>木1</option><option>木2</option><option>木3</option><option>木4</option><option>木5</option><option>木6</option>
-                      <option>金1</option><option>金2</option><option>金3</option><option>金4</option><option>金5</option><option>金6</option>
-                    </select>
-                    <button onclick="searchD()">検索</button>
-                </div>
-                <div id="resultD" class="result-box"></div>
-            </div>
-            <div class="card">
-                <h2>教室で検索</h2>
-                <div class="input-group">
-                    <select id="searchInputR">
-                        <option>101</option><option>104</option><option>105</option><option>106</option>
-                        <option>201</option><option>202</option><option>203</option><option>204</option><option>205</option><option>206</option><option>207</option><option>208</option><option>209</option><option>210</option><option>211</option><option>212</option><option>213</option>
-                        <option>301</option><option>302</option><option>303</option><option>304</option><option>305</option><option>306</option><option>307</option><option>308</option><option>309</option><option>310</option><option>311</option><option>312</option><option>313</option>
-                        <option>401</option><option>402</option><option>403</option><option>404</option>
-                    </select>
-                    <button onclick="searchR()">検索</button>
-                </div>
-                <div id="resultR" class="result-box"></div>
-            </div>
-            <div class="card text-center">
-                 <button onclick="showAddScreen()">使用状況を更新する</button>
+    <main>
+        <!-- オンボーディング(Welcome)画面 -->
+        <div class="card text-center" style="margin-top: 10vh;">
+            <h2 style="font-size: 1.5rem; margin-bottom: 20px;">空き教室を、もっと探しやすく。</h2>
+            <p style="color: var(--qcda-text-light); margin-bottom: 30px; line-height: 1.6;">
+                建物や時間、曜日を指定して、<br>
+                今使える教室を簡単に検索できます。
+            </p>
+            
+            <!-- 検索画面への遷移ボタン -->
+            <!-- ※search.htmlは今後のステップで作成します -->
+            <a href="search.html" class="btn">検索をはじめる</a>
+            
+            <!-- 管理者用データ更新画面へのリンク（開発用として一旦配置） -->
+            <!-- ※admin.htmlは今後のステップで作成します -->
+            <div style="margin-top: 30px;">
+                <a href="admin.html" style="font-size: 0.9rem; text-decoration: underline;">データ更新（管理者用）</a>
             </div>
         </div>
+    </main>
 
-        <!-- ===== 追加・編集画面 ===== -->
-        <div id="AddScreen" class="hidden">
-            <header class="app-header"><h1>使用状況の追加・変更</h1></header>
-            <div class="card">
-                <h2>CSVファイルで一括更新</h2>
-                <p>この機能は、GAS版でのみ使用できます。</p>
-                <p>CSVファイルをアップロードして、使用状況を一括で更新します。既存のデータはすべてクリアされ、CSVの内容に置き換わります。</p>
-                <input type="file" id="csvFile" accept=".csv" class="file-input">
-                <div class="text-center" style="margin-top: 15px;"><button onclick="uploadCsv()">このCSVファイルで更新（使用不可）</button></div>
-            </div>
-            <div class="card">
-                <h2>手動で更新</h2>
-                <p>使用している教室にチェックを入れてください。</p>
-                <div class="input-group">
-                    <select id="UPDATEsearchInput">
-                      <option>月1</option><option>月2</option><option>月3</option><option>月4</option><option>月5</option><option>月6</option>
-                      <option>火1</option><option>火2</option><option>火3</option><option>火4</option><option>火5</option><option>火6</option>
-                      <option>水1</option><option>水2</option><option>水3</option><option>水4</option><option>水5</option><option>水6</option>
-                      <option>木1</option><option>木2</option><option>木3</option><option>木4</option><option>木5</option><option>木6</option>
-                      <option>金1</option><option>金2</option><option>金3</option><option>金4</option><option>金5</option><option>金6</option>
-                    </select>
-                    <button onclick="displayCheckbox()">教室を表示</button>
-                </div>
-                <div id="result" class="checkbox-container"></div>
-                <div class="button-group">
-                     <div></div>
-                     <button onclick="updateCheckbox()">チェック内容で更新</button>
-                </div>
-            </div>
-            <div class="card text-center">
-                 <button onclick="showMainScreen()" class="secondary-button">検索画面に戻る</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-      // ▼▼▼▼▼【重要】「新しいデプロイ」で取得したウェブアプリのURLに必ず置き換えてください▼▼▼▼▼
-      const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwu1q0qHgdka5u7-9QEkGmKomMz95s_KbunaHUHasOuCedqlxmw9Rq_B3ykOFe5yYha/exec';
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
-      // --- UI制御 ---
-      const showProgress = () => { document.getElementById('progressIndicator').style.display = 'flex'; }
-      const hideProgress = () => { document.getElementById('progressIndicator').style.display = 'none'; }
-      const showMainScreen = () => {
-        document.getElementById('MainScreen').classList.remove('hidden');
-        document.getElementById('AddScreen').classList.add('hidden');
-      }
-      const showAddScreen = () => {
-        document.getElementById('AddScreen').classList.remove('hidden');
-        document.getElementById('MainScreen').classList.add('hidden');
-      }
-      const showToast = (message, isError = false) => {
-        const toast = document.getElementById('toastNotification');
-        toast.textContent = message;
-        toast.className = 'show ' + (isError ? 'error' : 'success');
-        setTimeout(() => { toast.className = ''; }, 5000);
-      }
-
-      // --- API URLのチェック関数 ---
-      function isApiUrlValid() {
-          if (!WEB_APP_URL || WEB_APP_URL === 'YOUR_NEW_GAS_WEB_APP_URL_HERE') {
-              showToast('APIのURLが設定されていません。index.htmlファイルを修正してください。', true);
-              return false;
-          }
-          return true;
-      }
-      
-      // --- API通信 (JSONP方式) ---
-      function apiRequest(payload) {
-        if (!isApiUrlValid()) return Promise.resolve(null);
-        showProgress();
-
-        let timeoutId = null;
-
-        return new Promise((resolve, reject) => {
-            const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-
-            window[callbackName] = (result) => {
-                clearTimeout(timeoutId);
-                cleanup();
-                if (result && result.success) {
-                    resolve(result.data);
-                } else {
-                    const errorMessage = result ? result.message : '不明なエラーが発生しました';
-                    reject(new Error(errorMessage));
-                }
-            };
-
-            const cleanup = () => {
-                const script = document.getElementById(callbackName);
-                if (script) {
-                    script.parentNode.removeChild(script);
-                }
-                delete window[callbackName];
-            };
-            
-            const stringifiedPayload = JSON.stringify(payload);
-            const encodedPayload = encodeURIComponent(stringifiedPayload);
-            const url = `${WEB_APP_URL}?callback=${callbackName}&p=${encodedPayload}`;
-            
-            if (url.length > 2000) {
-                 reject(new Error('リクエストが長すぎます。CSVファイルのサイズを小さくしてください。'));
-                 return;
-            }
-
-            timeoutId = setTimeout(() => {
-                cleanup();
-                reject(new Error('サーバーからの応答がありませんでした（タイムアウト）。'));
-            }, 15000);
-
-            const script = document.createElement('script');
-            script.id = callbackName;
-            script.src = url;
-            script.onerror = () => {
-                clearTimeout(timeoutId);
-                cleanup();
-                reject(new Error('スクリプトの読み込みに失敗しました。URLやネットワークを確認してください。'));
-            };
-            document.head.appendChild(script);
-
-        }).catch(error => {
-            console.error('API Request Error:', error);
-            showToast('エラー: ' + error.message, true);
-            return null;
-        }).finally(() => {
-            hideProgress();
-        });
-      }
-
-
-      // --- イベントハンドラ ---
-      async function searchD() {
-        const searchKey = document.getElementById('searchInput').value;
-        const data = await apiRequest({ action: 'searchDate', searchKey: searchKey });
-        if (data !== null) {
-          document.getElementById('resultD').innerText = data;
-        }
-      }
-
-      async function searchR() {
-        const searchKey = document.getElementById('searchInputR').value;
-        const data = await apiRequest({ action: 'searchRoom', searchKey: searchKey });
-        if (data !== null) {
-          document.getElementById('resultR').innerText = data;
-        }
-      }
-      
-      async function displayCheckbox(){
-        const searchKey = document.getElementById('UPDATEsearchInput').value;
-        const data = await apiRequest({ action: 'displayCheckboxes', searchKey: searchKey });
-        if (data) {
-            const container = document.getElementById('result');
-            container.innerHTML = '';
-            data.forEach(item => {
-                const label = document.createElement('label');
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.checked = item.checked;
-                checkbox.value = item.room;
-                label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(` ${item.room}`));
-                container.appendChild(label);
-            });
-        }
-      }
-
-      async function updateCheckbox() {
-        const checkboxes = document.querySelectorAll('#result input[type="checkbox"]');
-        if (checkboxes.length === 0) {
-            showToast("更新する教室がありません。「教室を表示」ボタンを押してください。", true);
-            return;
-        }
-        
-        const checkedValues = [];
-        checkboxes.forEach(cb => {
-          if (cb.checked) { checkedValues.push(cb.value); }
-        });
-        
-        const searchKey = document.getElementById('UPDATEsearchInput').value;
-        const result = await apiRequest({ 
-            action: 'updateCheckboxData', 
-            searchKey: searchKey,
-            checkedValues: checkedValues
-        });
-
-        if(result && result.message) {
-            showToast(result.message);
-            document.getElementById('result').innerHTML = '';
-        }
-      }
-
-      function uploadCsv() {
-        const fileInput = document.getElementById('csvFile');
-        const file = fileInput.files[0];
-        if (!file) { showToast('CSVファイルを選択してください。', true); return; }
-
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const csvContent = event.target.result;
-          const result = await apiRequest({
-              action: 'processCsv',
-              csvContent: csvContent
-          });
-          if(result && result.message) {
-             showToast(result.message);
-             fileInput.value = '';
-          }
-        };
-        reader.onerror = () => { showToast('ファイルの読み込みに失敗しました。', true); };
-        reader.readAsText(file);
-      }
-    </script>
 </body>
 </html>
