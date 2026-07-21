@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>データ更新(管理者) | 教室検索</title>
+    
+    <!-- アイコン設定 -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+
+    <!-- 共通スタイルシート -->
+    <link rel="stylesheet" href="common.css">
+    
+    <!-- ページ個別スタイル -->
+    <style>
+        .file-input-wrapper {
+            margin: 20px 0;
+        }
+        .file-input {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid var(--qcda-border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            background-color: var(--qcda-white);
+        }
+        .status-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            background-color: #e9ecef;
+            font-size: 0.9rem;
+            color: var(--qcda-text-main);
+            min-height: 50px;
+            white-space: pre-wrap; /* 改行を反映 */
+        }
+        .warning-text {
+            font-size: 0.8rem;
+            color: var(--qcda-error);
+            margin-top: 10px;
+        }
+    </style>
+
+    <!-- モジュールとして読み込む (Firebaseを使用するため) -->
+    <script type="module" src="common.js" defer></script>
+    
+    <!-- ページ個別のスクリプト -->
+    <script type="module">
+        // common.js で初期化された db をインポート
+        import { db } from './common.js';
+        // Firestoreの操作に必要な関数をインポート
+        import { collection, writeBatch, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const uploadBtn = document.getElementById('uploadBtn');
+            const csvFileInput = document.getElementById('csvFile');
+            const statusBox = document.getElementById('statusBox');
+
+            const updateStatus = (message) => {
+                const time = new Date().toLocaleTimeString();
+                statusBox.textContent = `[${time}] ${message}\n` + statusBox.textContent;
+            };
+
+            const parseCSVRow = (str) => {
+                let result = [];
+                let cur = '';
+                let inQuote = false;
+                for (let i = 0; i < str.length; i++) {
+                    let char = str[i];
+                    if (inQuote) {
+                        if (char === '"') {
+                            if (i + 1 < str.length && str[i + 1] === '"') {
+                                cur += '"'; i++; // エスケープされた"
+                            } else {
+                                inQuote = false;
+                            }
+                        } else {
+                            cur += char;
+                        }
+                    } else {
+                        if (char === '"') {
+                            inQuote = true;
+                        } else if (char === ',') {
+                            result.push(cur.trim());
+                            cur = '';
+                        } else {
+                            cur += char;
+                        }
+                    }
+                }
+                result.push(cur.trim());
+                return result;
+            };
+
+            const updateDatabase = async (csvText) => {
+                try {
+                    updateStatus("CSVの解析を開始します...");
+                    const lines = csvText.trim().split('\n');
+                    if (lines.length < 2) {
+                        throw new Error("CSVデータが空か、ヘッダーしかありません。");
+                    }
+
+                    // ヘッダーの確認（Pythonからの出力「曜日,時限,カテゴリ,授業番号,開講時期,科目名,棟,教室,教員名」を想定）
+                    const headers = parseCSVRow(lines[0]);
+                    
+                    const classesData = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        if (lines[i].trim() === '') continue;
+                        const row = parseCSVRow(lines[i]);
+                        
+                        // ヘッダーとデータをマッピング
+                        const item = {};
+                        headers.forEach((header, index) => {
+                            // Firestoreのフィールド名として英数字を使うための変換（検索に使う主要項目）
+                            let fieldName = header;
+                            switch(header) {
+                                case '曜日': fieldName = 'day'; break;
+                                case '時限': fieldName = 'period'; break;
+                                case '開講時期': fieldName = 'term'; break;
+                                case '棟': fieldName = 'building'; break;
+                                case '教室': fieldName = 'room'; break;
+                                case '科目名': fieldName = 'subject'; break;
+                                // カテゴリ、授業番号、教員名は元の日本語ヘッダーのまま保存（今回は検索に直接使わないため）
+                            }
+                            item[fieldName] = row[index] || '';
+                        });
+                        classesData.push(item);
+                    }
+
+                    updateStatus(`CSVから ${classesData.length} 件のデータを読み込みました。`);
+                    
+                    const classesRef = collection(db, "classes");
+
+                    // 1. 既存データの削除 (Firestoreは一度に500件までしかBatch処理できないため分割)
+                    updateStatus("データベース上の古いデータを削除しています...");
+                    uploadBtn.disabled = true; // ボタン無効化
+
+                    const snapshot = await getDocs(classesRef);
+                    let batches = [];
+                    let currentBatch = writeBatch(db);
+                    let count = 0;
+
+                    snapshot.docs.forEach((document) => {
+                        currentBatch.delete(document.ref);
+                        count++;
+                        if (count === 500) {
+                            batches.push(currentBatch.commit());
+                            currentBatch = writeBatch(db);
+                            count = 0;
+                        }
+                    });
+                    if (count > 0) {
+                        batches.push(currentBatch.commit());
+                    }
+                    await Promise.all(batches); // すべての削除Batchを並列実行
+                    updateStatus("古いデータの削除が完了しました。");
+
+                    // 2. 新しいデータの追加
+                    updateStatus("新しいデータをデータベースに保存しています...");
+                    batches = [];
+                    currentBatch = writeBatch(db);
+                    count = 0;
+                    let addedCount = 0;
+
+                    classesData.forEach((item) => {
+                        const newDocRef = doc(classesRef); // 新しいドキュメントIDを自動生成
+                        currentBatch.set(newDocRef, item);
+                        count++;
+                        addedCount++;
+                        if (count === 500) {
+                            batches.push(currentBatch.commit());
+                            currentBatch = writeBatch(db);
+                            count = 0;
+                        }
+                    });
+                    if (count > 0) {
+                        batches.push(currentBatch.commit());
+                    }
+                    await Promise.all(batches); // すべての追加Batchを並列実行
+
+                    updateStatus(`🎉 完了しました！ ${addedCount} 件の授業データを保存しました。`);
+                    csvFileInput.value = ""; // 入力をクリア
+                    
+                } catch (error) {
+                    console.error("Error updating database:", error);
+                    updateStatus(`❌ エラーが発生しました: ${error.message}`);
+                } finally {
+                    uploadBtn.disabled = false; // ボタン有効化
+                }
+            };
+
+            uploadBtn.addEventListener('click', () => {
+                const file = csvFileInput.files[0];
+                if (!file) {
+                    updateStatus("⚠️ CSVファイルが選択されていません。");
+                    return;
+                }
+
+                // 確認ダイアログ（本来はUIルールで避けるべきですが、管理者用の全データ削除を伴うため安全のために自作モーダル等にするのが理想。今回は暫定で処理を進めます）
+                updateStatus("ファイルの読み込みを開始します...");
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const csvText = e.target.result;
+                    updateDatabase(csvText);
+                };
+                reader.onerror = () => {
+                    updateStatus("❌ ファイルの読み込みに失敗しました。");
+                };
+                reader.readAsText(file);
+            });
+        });
+    </script>
+</head>
+<body>
+    <main>
+        <div class="card">
+            <h2 style="font-size: 1.2rem; border-bottom: 2px solid var(--qcda-border); padding-bottom: 10px; margin-bottom: 20px;">
+                データベース一括更新
+            </h2>
+            <p style="font-size: 0.9rem; color: var(--qcda-text-light); margin-bottom: 15px;">
+                Pythonスクリプトから出力されたCSVファイル（all_parsed_classes_unfiltered.csv など）を選択し、データを更新します。<br>
+                ※既存のデータはすべてクリアされ、アップロードしたデータに置き換わります。
+            </p>
+
+            <div class="file-input-wrapper">
+                <input type="file" id="csvFile" accept=".csv" class="file-input">
+            </div>
+
+            <button id="uploadBtn" class="btn">データを更新する</button>
+            <p class="warning-text">※テスト時は数行のCSVで行うことをお勧めします（無料枠の書き込み制限2万回/日のため）。</p>
+            
+            <div id="statusBox" class="status-box">ここに処理状況が表示されます。</div>
+        </div>
+
+        <div class="text-center" style="margin-top: 20px;">
+            <a href="index.html" class="btn" style="background-color: var(--qcda-text-light);">トップ画面に戻る</a>
+        </div>
+    </main>
+</body>
+</html>
