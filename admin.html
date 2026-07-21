@@ -43,6 +43,13 @@
             color: var(--qcda-error);
             margin-top: 10px;
         }
+        /* 手動更新用のチェックボックススタイル */
+        .checkbox-label {
+            display: flex; align-items: center; gap: 5px; font-size: 1rem; cursor: pointer;
+        }
+        .checkbox-label input {
+            width: 1.2rem; height: 1.2rem; cursor: pointer;
+        }
     </style>
 
     <!-- モジュールとして読み込む (Firebaseを使用するため) -->
@@ -53,7 +60,7 @@
         // common.js で初期化された db をインポート
         import { db } from './common.js';
         // Firestoreの操作に必要な関数をインポート
-        import { collection, writeBatch, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { collection, writeBatch, doc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         document.addEventListener('DOMContentLoaded', () => {
             const uploadBtn = document.getElementById('uploadBtn');
@@ -200,7 +207,6 @@
                     return;
                 }
 
-                // 確認ダイアログ（本来はUIルールで避けるべきですが、管理者用の全データ削除を伴うため安全のために自作モーダル等にするのが理想。今回は暫定で処理を進めます）
                 updateStatus("ファイルの読み込みを開始します...");
                 
                 const reader = new FileReader();
@@ -213,6 +219,132 @@
                 };
                 reader.readAsText(file);
             });
+
+            // ==========================================
+            // --- ここから「手動更新機能」のロジック ---
+            // ==========================================
+            const roomMaster = {
+                "1号": ["101", "102", "103", "104", "105", "106", "107", "109", "110", "120", "147", "148", "201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "220", "230", "240", "301", "302", "303", "304", "308", "309", "310", "320", "330", "340", "350"],
+                "6号": ["101", "104", "105", "106", "201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "211", "212", "213", "301", "302", "303", "304", "305", "306", "307", "308", "309", "310", "311", "312", "313", "401", "402", "403", "404"]
+            };
+            let currentDocs = []; // 読み込んだ既存データを保持
+
+            const fetchManBtn = document.getElementById('fetchManBtn');
+            const updateManBtn = document.getElementById('updateManBtn');
+            const manCheckboxes = document.getElementById('manCheckboxes');
+            const manStatusBox = document.getElementById('manStatusBox');
+
+            if(fetchManBtn) {
+                fetchManBtn.addEventListener('click', async () => {
+                    const building = document.getElementById('manBuilding').value;
+                    const term = document.getElementById('manTerm').value;
+                    const day = document.getElementById('manDay').value;
+                    const period = document.getElementById('manPeriod').value;
+
+                    fetchManBtn.disabled = true;
+                    manCheckboxes.innerHTML = '<p style="color: var(--qcda-text-light);">使用状況を読み込み中...</p>';
+                    updateManBtn.style.display = 'none';
+                    manStatusBox.style.display = 'none';
+
+                    try {
+                        const classesRef = collection(db, "classes");
+                        const q = query(classesRef, where("building", "==", building));
+                        const querySnapshot = await getDocs(q);
+
+                        currentDocs = [];
+                        const occupiedRooms = new Set();
+
+                        // 該当時間の「使用中」教室を抽出
+                        querySnapshot.forEach((docSnap) => {
+                            const data = docSnap.data();
+                            if (data.term && data.term.includes(term) && data.day === day && data.period === String(period)) {
+                                occupiedRooms.add(data.room);
+                                currentDocs.push({ id: docSnap.id, room: data.room });
+                            }
+                        });
+
+                        manCheckboxes.innerHTML = '';
+                        roomMaster[building].forEach(room => {
+                            const isChecked = occupiedRooms.has(room);
+                            const label = document.createElement('label');
+                            label.className = 'checkbox-label';
+                            label.innerHTML = `<input type="checkbox" value="${room}" ${isChecked ? 'checked' : ''}> ${room}`;
+                            manCheckboxes.appendChild(label);
+                        });
+
+                        updateManBtn.style.display = 'block';
+                    } catch (error) {
+                        console.error(error);
+                        manCheckboxes.innerHTML = `<p style="color:red;">エラーが発生しました: ${error.message}</p>`;
+                    } finally {
+                        fetchManBtn.disabled = false;
+                    }
+                });
+            }
+
+            if(updateManBtn) {
+                updateManBtn.addEventListener('click', async () => {
+                    const building = document.getElementById('manBuilding').value;
+                    const term = document.getElementById('manTerm').value;
+                    const day = document.getElementById('manDay').value;
+                    const period = document.getElementById('manPeriod').value;
+
+                    const checkboxes = manCheckboxes.querySelectorAll('input[type="checkbox"]');
+                    const newOccupiedRooms = new Set();
+                    checkboxes.forEach(cb => {
+                        if (cb.checked) newOccupiedRooms.add(cb.value);
+                    });
+
+                    updateManBtn.disabled = true;
+                    manStatusBox.style.display = 'block';
+                    manStatusBox.textContent = '更新中...';
+
+                    try {
+                        const batch = writeBatch(db);
+                        let changesMade = 0;
+
+                        // 1. チェックが外された教室のデータを削除
+                        currentDocs.forEach(docInfo => {
+                            if (!newOccupiedRooms.has(docInfo.room)) {
+                                batch.delete(doc(db, "classes", docInfo.id));
+                                changesMade++;
+                            }
+                        });
+
+                        // 2. 新たにチェックされた教室のデータを追加
+                        const oldOccupiedRooms = new Set(currentDocs.map(d => d.room));
+                        newOccupiedRooms.forEach(room => {
+                            if (!oldOccupiedRooms.has(room)) {
+                                const newDocRef = doc(collection(db, "classes"));
+                                batch.set(newDocRef, {
+                                    building: building,
+                                    term: term,
+                                    day: day,
+                                    period: String(period),
+                                    room: room,
+                                    subject: '手動追加', // 手動追加であることがわかるようにする
+                                    manualEntry: true
+                                });
+                                changesMade++;
+                            }
+                        });
+
+                        if (changesMade > 0) {
+                            await batch.commit();
+                            manStatusBox.textContent = '✅ 更新が完了しました。';
+                            // 更新後、最新の状態で画面を再読み込み
+                            fetchManBtn.click();
+                        } else {
+                            manStatusBox.textContent = '変更はありませんでした。';
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        manStatusBox.textContent = `❌ エラー: ${error.message}`;
+                    } finally {
+                        updateManBtn.disabled = false;
+                    }
+                });
+            }
         });
     </script>
 </head>
@@ -236,6 +368,37 @@
             
             <div id="statusBox" class="status-box">ここに処理状況が表示されます。</div>
         </div>
+
+        <!-- ▼▼▼ 手動更新用UIの追加 ▼▼▼ -->
+        <div class="card" style="margin-top: 20px;">
+            <h2 style="font-size: 1.2rem; border-bottom: 2px solid var(--qcda-border); padding-bottom: 10px; margin-bottom: 20px;">
+                手動更新
+            </h2>
+            <p style="font-size: 0.9rem; color: var(--qcda-text-light); margin-bottom: 15px;">
+                特定の時間帯の使用状況を手動で確認・更新できます。休講や急な教室変更などの際にご利用ください。<br>
+                <strong>※チェックを入れた教室が「使用中（空きなし）」扱いとなります。</strong>
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;"><label style="font-size: 0.9rem; font-weight: bold;">建物</label><select id="manBuilding" class="file-input"><option value="1号">1号</option><option value="6号" selected>6号</option></select></div>
+                    <div style="flex: 1;"><label style="font-size: 0.9rem; font-weight: bold;">時期</label><select id="manTerm" class="file-input"><option value="前期">前期</option><option value="後期" selected>後期</option></select></div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;"><label style="font-size: 0.9rem; font-weight: bold;">曜日</label><select id="manDay" class="file-input"><option value="月">月</option><option value="火">火</option><option value="水">水</option><option value="木">木</option><option value="金">金</option></select></div>
+                    <div style="flex: 1;"><label style="font-size: 0.9rem; font-weight: bold;">時限</label><select id="manPeriod" class="file-input"><option value="1">1限</option><option value="2">2限</option><option value="3">3限</option><option value="4">4限</option><option value="5">5限</option><option value="6">6限</option></select></div>
+                </div>
+                <button id="fetchManBtn" class="btn">使用状況を読み込む</button>
+            </div>
+
+            <div id="manCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                <!-- チェックボックスがここに表示されます -->
+            </div>
+            
+            <button id="updateManBtn" class="btn" style="background-color: var(--qcda-success); display: none;">チェック内容で更新</button>
+            <div id="manStatusBox" class="status-box" style="display: none; min-height: auto;"></div>
+        </div>
+        <!-- ▲▲▲ 手動更新用UIの追加 ▲▲▲ -->
 
         <div class="text-center" style="margin-top: 20px;">
             <a href="index.html" class="btn" style="background-color: var(--qcda-text-light);">トップ画面に戻る</a>
