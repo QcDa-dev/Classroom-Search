@@ -90,10 +90,16 @@
         import { db } from './common.js';
         import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+        // マスターデータ: 建物の全教室リスト
+        const roomMaster = {
+            "1号": ["101", "102", "103", "104", "105", "106", "107", "109", "110", "120", "147", "148", "201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "220", "230", "240", "301", "302", "303", "304", "308", "309", "310", "320", "330", "340", "350"],
+            "6号": ["101", "104", "105", "106", "201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "211", "212", "213", "301", "302", "303", "304", "305", "306", "307", "308", "309", "310", "311", "312", "313", "401", "402", "403", "404"]
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             const searchBtn = document.getElementById('searchBtn');
-            const bldgInput = document.getElementById('buildingInput');
-            const termInput = document.getElementById('termInput');
+            const bldgSelect = document.getElementById('buildingSelect');
+            const termSelect = document.getElementById('termSelect');
             const daySelect = document.getElementById('daySelect');
             const periodSelect = document.getElementById('periodSelect');
             
@@ -104,13 +110,13 @@
 
             // --- 検索処理 ---
             searchBtn.addEventListener('click', async () => {
-                const building = bldgInput.value.trim();
-                const term = termInput.value.trim();
+                const building = bldgSelect.value;
+                const term = termSelect.value;
                 const day = daySelect.value;
                 const period = periodSelect.value;
 
                 if (!building || !term) {
-                    alert("建物と開講時期を入力してください。");
+                    alert("建物と開講時期を選択してください。");
                     return;
                 }
 
@@ -120,18 +126,13 @@
                 searchBtn.disabled = true;
 
                 try {
-                    // 1. Firebaseから対象の建物のデータを取得 (Read数節約のため建物だけで絞り込み)
+                    // 1. Firebaseから対象の建物のデータを取得
                     const classesRef = collection(db, "classes");
                     const q = query(classesRef, where("building", "==", building));
                     const querySnapshot = await getDocs(q);
 
-                    if (querySnapshot.empty) {
-                        showResult(`${building} のデータが見つかりません。`, "データなし");
-                        return;
-                    }
-
                     // 2. ブラウザ側で詳細なフィルタリングと空き教室の算出
-                    const allRooms = new Set(); // その建物のすべての教室リスト
+                    const allRooms = new Set(roomMaster[building]); // マスターデータから全教室を取得
                     const occupiedRooms = new Set(); // 授業で使われている教室リスト
 
                     querySnapshot.forEach((doc) => {
@@ -140,13 +141,10 @@
                         // 教室名がないデータは除外
                         if (!data.room) return;
 
-                        // 対象建物の全教室をセットに追加 (重複なし)
-                        allRooms.add(data.room);
-
                         // 開講時期の部分一致チェック（「後期」と入力されて「後期Ⅰ」等にヒットさせるため）
                         if (data.term && data.term.includes(term)) {
                             // 曜日と時限が一致するかチェック (半角/全角の違いなどを考慮して緩やかに比較)
-                            if (data.day === day && data.period === period) {
+                            if (data.day === day && data.period === String(period)) { // String()で確実に文字列比較
                                 occupiedRooms.add(data.room);
                             }
                         }
@@ -160,19 +158,14 @@
                         }
                     });
 
-                    // 4. 結果の表示用に並び替え（文字列としてソートすると '101' と '1011' がおかしくなるので注意）
-                    emptyRooms.sort((a, b) => a.localeCompare(b, 'ja', { numeric: true }));
-
-                    // 5. 画面に表示
+                    // 4. 画面に表示
                     const titleText = `${building} (${term}) - ${day}曜日 ${period}限 の空き教室`;
                     
                     if (emptyRooms.length > 0) {
                         const html = emptyRooms.map(r => `<span class="room-badge">${r}</span>`).join('');
                         showResult(html, titleText);
-                    } else if (allRooms.size > 0) {
-                        showResult("空き教室はありません。", titleText);
                     } else {
-                        showResult("該当する条件の教室データがありません。", titleText);
+                        showResult("該当する条件の空き教室はありません。", titleText);
                     }
 
                 } catch (error) {
@@ -201,14 +194,19 @@
             
             <div class="search-container">
                 <div class="input-group">
-                    <label for="buildingInput">建物 (※完全一致)</label>
-                    <input type="text" id="buildingInput" class="form-control" placeholder="例: 6号" value="6号">
-                    <small style="color: var(--qcda-text-light); font-size: 0.75rem;">※CSV内の表記に合わせてください</small>
+                    <label for="buildingSelect">建物</label>
+                    <select id="buildingSelect" class="form-control">
+                        <option value="1号">1号</option>
+                        <option value="6号" selected>6号</option>
+                    </select>
                 </div>
 
                 <div class="input-group">
-                    <label for="termInput">開講時期 (※部分一致)</label>
-                    <input type="text" id="termInput" class="form-control" placeholder="例: 後期" value="後期">
+                    <label for="termSelect">開講時期</label>
+                    <select id="termSelect" class="form-control">
+                        <option value="前期">前期</option>
+                        <option value="後期" selected>後期</option>
+                    </select>
                 </div>
 
                 <div class="flex-row">
