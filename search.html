@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空き教室検索 | QcDa Project</title>
+    
+    <!-- アイコン設定 -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+
+    <!-- 共通スタイルシート -->
+    <link rel="stylesheet" href="common.css">
+    
+    <!-- ページ個別スタイル -->
+    <style>
+        .search-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .input-group label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--qcda-text-main);
+        }
+        .form-control {
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid var(--qcda-border);
+            border-radius: 6px;
+            background-color: var(--qcda-white);
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .flex-row {
+            display: flex;
+            gap: 10px;
+        }
+        .flex-row .input-group {
+            flex: 1;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            background-color: #e9ecef;
+            min-height: 80px;
+        }
+        .result-title {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+        .result-content {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+        .room-badge {
+            display: inline-block;
+            background-color: var(--qcda-primary);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            margin: 0 5px 5px 0;
+            font-size: 0.95rem;
+        }
+        .loading {
+            text-align: center;
+            color: var(--qcda-text-light);
+            font-size: 0.9rem;
+            display: none; /* 初期非表示 */
+            margin-top: 10px;
+        }
+    </style>
+
+    <!-- モジュールとして読み込む (Firebaseを使用するため) -->
+    <script type="module" src="common.js" defer></script>
+    
+    <script type="module">
+        import { db } from './common.js';
+        import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchBtn = document.getElementById('searchBtn');
+            const bldgInput = document.getElementById('buildingInput');
+            const termInput = document.getElementById('termInput');
+            const daySelect = document.getElementById('daySelect');
+            const periodSelect = document.getElementById('periodSelect');
+            
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const resultBox = document.getElementById('resultBox');
+            const resultContent = document.getElementById('resultContent');
+            const resultTitle = document.getElementById('resultTitle');
+
+            // --- 検索処理 ---
+            searchBtn.addEventListener('click', async () => {
+                const building = bldgInput.value.trim();
+                const term = termInput.value.trim();
+                const day = daySelect.value;
+                const period = periodSelect.value;
+
+                if (!building || !term) {
+                    alert("建物と開講時期を入力してください。");
+                    return;
+                }
+
+                loadingIndicator.style.display = 'block';
+                resultBox.classList.add('hidden');
+                resultContent.innerHTML = '';
+                searchBtn.disabled = true;
+
+                try {
+                    // 1. Firebaseから対象の建物のデータを取得 (Read数節約のため建物だけで絞り込み)
+                    const classesRef = collection(db, "classes");
+                    const q = query(classesRef, where("building", "==", building));
+                    const querySnapshot = await getDocs(q);
+
+                    if (querySnapshot.empty) {
+                        showResult(`${building} のデータが見つかりません。`, "データなし");
+                        return;
+                    }
+
+                    // 2. ブラウザ側で詳細なフィルタリングと空き教室の算出
+                    const allRooms = new Set(); // その建物のすべての教室リスト
+                    const occupiedRooms = new Set(); // 授業で使われている教室リスト
+
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        
+                        // 教室名がないデータは除外
+                        if (!data.room) return;
+
+                        // 対象建物の全教室をセットに追加 (重複なし)
+                        allRooms.add(data.room);
+
+                        // 開講時期の部分一致チェック（「後期」と入力されて「後期Ⅰ」等にヒットさせるため）
+                        if (data.term && data.term.includes(term)) {
+                            // 曜日と時限が一致するかチェック (半角/全角の違いなどを考慮して緩やかに比較)
+                            if (data.day === day && data.period === period) {
+                                occupiedRooms.add(data.room);
+                            }
+                        }
+                    });
+
+                    // 3. 全教室から使われている教室を引いて、空き教室を算出
+                    const emptyRooms = [];
+                    allRooms.forEach(room => {
+                        if (!occupiedRooms.has(room)) {
+                            emptyRooms.push(room);
+                        }
+                    });
+
+                    // 4. 結果の表示用に並び替え（文字列としてソートすると '101' と '1011' がおかしくなるので注意）
+                    emptyRooms.sort((a, b) => a.localeCompare(b, 'ja', { numeric: true }));
+
+                    // 5. 画面に表示
+                    const titleText = `${building} (${term}) - ${day}曜日 ${period}限 の空き教室`;
+                    
+                    if (emptyRooms.length > 0) {
+                        const html = emptyRooms.map(r => `<span class="room-badge">${r}</span>`).join('');
+                        showResult(html, titleText);
+                    } else if (allRooms.size > 0) {
+                        showResult("空き教室はありません。", titleText);
+                    } else {
+                        showResult("該当する条件の教室データがありません。", titleText);
+                    }
+
+                } catch (error) {
+                    console.error("検索エラー:", error);
+                    showResult(`エラーが発生しました: ${error.message}`, "検索エラー");
+                } finally {
+                    loadingIndicator.style.display = 'none';
+                    searchBtn.disabled = false;
+                }
+            });
+
+            function showResult(htmlContent, title) {
+                resultTitle.textContent = title;
+                resultContent.innerHTML = htmlContent;
+                resultBox.classList.remove('hidden');
+            }
+        });
+    </script>
+</head>
+<body>
+    <main>
+        <div class="card">
+            <h2 style="font-size: 1.2rem; border-bottom: 2px solid var(--qcda-border); padding-bottom: 10px; margin-bottom: 20px;">
+                空き教室検索
+            </h2>
+            
+            <div class="search-container">
+                <div class="input-group">
+                    <label for="buildingInput">建物 (※完全一致)</label>
+                    <input type="text" id="buildingInput" class="form-control" placeholder="例: 6号" value="6号">
+                    <small style="color: var(--qcda-text-light); font-size: 0.75rem;">※CSV内の表記に合わせてください</small>
+                </div>
+
+                <div class="input-group">
+                    <label for="termInput">開講時期 (※部分一致)</label>
+                    <input type="text" id="termInput" class="form-control" placeholder="例: 後期" value="後期">
+                </div>
+
+                <div class="flex-row">
+                    <div class="input-group">
+                        <label for="daySelect">曜日</label>
+                        <select id="daySelect" class="form-control">
+                            <option value="月">月</option>
+                            <option value="火">火</option>
+                            <option value="水">水</option>
+                            <option value="木">木</option>
+                            <option value="金">金</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="periodSelect">時限</label>
+                        <select id="periodSelect" class="form-control">
+                            <option value="1">1限</option>
+                            <option value="2">2限</option>
+                            <option value="3">3限</option>
+                            <option value="4">4限</option>
+                            <option value="5">5限</option>
+                            <option value="6">6限</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button id="searchBtn" class="btn" style="margin-top: 10px;">空き教室を検索</button>
+                <div id="loadingIndicator" class="loading">検索中... (初回は少し時間がかかります)</div>
+            </div>
+        </div>
+
+        <!-- 検索結果表示エリア -->
+        <div id="resultBox" class="card hidden">
+            <div id="resultTitle" class="result-title">検索結果</div>
+            <div id="resultContent" class="result-content">
+                <!-- 結果がここに表示されます -->
+            </div>
+        </div>
+    </main>
+</body>
+</html>
