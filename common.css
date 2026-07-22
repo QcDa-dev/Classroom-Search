@@ -4,11 +4,11 @@
 QcDa Project 共通スタイル (v2.0 - 安定版ハンバーガーメニュー統合)
 ========================================================================== */
 
-/* --- CSS変数 (オリジナルの色合いを復元) --- /
+/* --- CSS変数 (オリジナルの色合いを復元) --- */
 :root {
---qcda-primary: #007BFF; / 青 /
+--qcda-primary: #007BFF;
 --qcda-primary-hover: #0056b3;
---qcda-secondary: #f0f8ff; / 薄い青 */
+--qcda-secondary: #f0f8ff;
 --qcda-text-main: #334155;
 --qcda-text-light: #64748b;
 --qcda-bg-color: #f8fafc;
@@ -78,13 +78,13 @@ letter-spacing: -0.02em;
 cursor: pointer;
 }
 
-/* ハンバーガーボタン本体 /
+/* ハンバーガーボタン本体 */
 .hamburger-btn {
 width: 44px;
 height: 44px;
 position: relative;
 z-index: 1002;
-display: flex !important; / 強制表示 /
+display: flex !important;
 flex-direction: column;
 justify-content: center;
 align-items: center;
@@ -95,7 +95,7 @@ cursor: pointer;
 padding: 0;
 margin: 0;
 outline: none;
-flex-shrink: 0; / スマホで右端から押し出されるのを防ぐ */
+flex-shrink: 0;
 }
 
 .hamburger-btn span {
@@ -117,11 +117,11 @@ opacity: 0;
 transform: translateY(-9px) rotate(-45deg);
 }
 
-/* ハンバーガーメニューのオーバーレイ（スライドしてくる部分） /
+/* ハンバーガーメニューのオーバーレイ（スライドしてくる部分） */
 .menu-overlay {
 position: fixed;
 top: 0;
-right: -300px; / 初期状態は画面外 */
+right: -300px;
 width: 280px;
 height: 100vh;
 background-color: white;
@@ -209,11 +209,11 @@ border-top: 1px solid var(--qcda-border);
 
 /* ==========================================================================
 Main Layout & Components (オリジナルのデザインを復元)
-========================================================================== /
+========================================================================== */
 main {
 flex-grow: 1;
 padding: calc(var(--header-height) + 30px) 20px 60px;
-max-width: 650px; / 元の幅に戻す */
+max-width: 650px;
 margin: 0 auto;
 width: 100%;
 }
