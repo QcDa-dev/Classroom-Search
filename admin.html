@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>データ更新(管理者) | 教室検索</title>
+    <title>データ更新 | 教室検索</title>
     
     <!-- アイコン設定 -->
     <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -355,7 +355,7 @@
                 データベース一括更新
             </h2>
             <p style="font-size: 0.9rem; color: var(--qcda-text-light); margin-bottom: 15px;">
-                Pythonスクリプトから出力されたCSVファイル（all_parsed_classes_unfiltered.csv など）を選択し、データを更新します。<br>
+                CSVファイルを選択し、データを更新します。<br>
                 ※既存のデータはすべてクリアされ、アップロードしたデータに置き換わります。
             </p>
 
@@ -363,10 +363,11 @@
                 <input type="file" id="csvFile" accept=".csv" class="file-input">
             </div>
 
-            <button id="uploadBtn" class="btn">データを更新する</button>
-            <p class="warning-text">※テスト時は数行のCSVで行うことをお勧めします（無料枠の書き込み制限2万回/日のため）。</p>
+            <button class="btn">データを更新する</button>
+            <!-- <button id="uploadBtn" class="btn">データを更新する</button> -->
+            <p class="warning-text">※ 管理者専用機能です。</p>
             
-            <div id="statusBox" class="status-box">ここに処理状況が表示されます。</div>
+            <!-- <div id="statusBox" class="status-box">ここに処理状況が表示されます。</div> -->
         </div>
 
         <!-- ▼▼▼ 手動更新用UIの追加 ▼▼▼ -->
@@ -375,7 +376,7 @@
                 手動更新
             </h2>
             <p style="font-size: 0.9rem; color: var(--qcda-text-light); margin-bottom: 15px;">
-                特定の時間帯の使用状況を手動で確認・更新できます。休講や急な教室変更などの際にご利用ください。<br>
+                特定の時間帯の使用状況を手動で確認・更新できます。教室変更などの際にご利用ください。<br>
                 <strong>※チェックを入れた教室が「使用中（空きなし）」扱いとなります。</strong>
             </p>
 
