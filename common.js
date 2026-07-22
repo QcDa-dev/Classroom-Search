@@ -1,7 +1,7 @@
 // ==========================================================================
 // App Variables & Configuration
 // ==========================================================================
-const APP_VERSION = "v2.0.0 (Beta)";
+const APP_VERSION = "v1.0.0";
 const APP_NAME = "教室検索";
 
 // Firebase Configuration (教室検索用)
@@ -102,7 +102,7 @@ function initHeaderAndMenu() {
         <ul class="menu-list">
             <li><a href="${navUrls.guide}" target="_blank">使い方ガイド</a></li>
             <li><a href="${navUrls.contact}" target="_blank">お問い合わせ</a></li>
-            <li class="menu-separator"><a href="${navUrls.release}" target="_blank" style="text-decoration: underline;">リリースノート</a></li>
+            <li class="menu-separator"><a href="${navUrls.release}" target="_blank"">リリースノート</a></li>
             
             <li><a href="${navUrls.about}" target="_blank">QcDa Projectとは</a></li>
             <li class="menu-sub-item"><a href="${navUrls.terms}" target="_blank">利用規約</a></li>
