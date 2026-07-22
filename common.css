@@ -1,44 +1,96 @@
 @charset "UTF-8";
 
 /* ==========================================================================
-QcDa Project 共通スタイル (スマートフォン優先・レスポンシブ)
+QcDa Project 共通スタイル (v2.0)
 ========================================================================== */
 
+/* --- CSS変数 --- */
 :root {
-/* QcDa Theme Colors - 変更が必要な場合はここを調整 */
---qcda-primary: #0056b3;
---qcda-primary-hover: #004494;
---qcda-bg-color: #f8f9fa;
+--qcda-primary: #007BFF;
+--qcda-primary-hover: #0056b3;
+--qcda-secondary: #6c757d;
+--qcda-secondary-hover: #545b62;
+--qcda-bg-color: #f4f7f9;
+--qcda-card-bg: #ffffff;
 --qcda-text-main: #333333;
---qcda-text-light: #6c757d;
+--qcda-text-light: #666666;
 --qcda-border: #dee2e6;
---qcda-white: #ffffff;
---qcda-error: #dc3545;
 --qcda-success: #28a745;
-
+--qcda-error: #dc3545;
+--qcda-white: #ffffff;
 --header-height: 60px;
---footer-height: 80px;
 }
 
-/* Base */
-body {
-font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-background-color: var(--qcda-bg-color);
-color: var(--qcda-text-main);
+/* --- リセット & 基本設定 --- */
+html, body {
 margin: 0;
 padding: 0;
-min-height: 100vh;
-display: flex;
-flex-direction: column;
--webkit-font-smoothing: antialiased;
+font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+background-color: var(--qcda-bg-color);
+color: var(--qcda-text-main);
+line-height: 1.6;
 }
 
 a {
 color: var(--qcda-primary);
 text-decoration: none;
 }
+a:hover {
+text-decoration: underline;
+}
 
-/* Header */
+ul {
+list-style-type: none;
+padding: 0;
+margin: 0;
+}
+
+/* --- レイアウト --- /
+main {
+max-width: 650px;
+margin: 0 auto;
+padding: calc(var(--header-height) + 20px) 15px 80px; / ヘッダーとフッターの余白 */
+min-height: calc(100vh - 160px);
+}
+
+/* --- コンポーネント --- /
+/ カード */
+.card {
+background-color: var(--qcda-card-bg);
+border-radius: 8px;
+padding: 20px;
+margin-bottom: 20px;
+box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* ボタン */
+.btn {
+display: inline-block;
+padding: 10px 20px;
+font-size: 1rem;
+color: var(--qcda-white);
+background-color: var(--qcda-primary);
+border: none;
+border-radius: 5px;
+cursor: pointer;
+text-align: center;
+transition: background-color 0.2s, box-shadow 0.2s;
+font-weight: 500;
+text-decoration: none;
+box-sizing: border-box;
+}
+.btn:hover {
+background-color: var(--qcda-primary-hover);
+box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+text-decoration: none;
+}
+.btn:disabled {
+background-color: #cccccc;
+cursor: not-allowed;
+box-shadow: none;
+}
+
+/* --- ヘッダー --- */
 header {
 position: fixed;
 top: 0;
@@ -48,48 +100,68 @@ height: var(--header-height);
 background-color: var(--qcda-white);
 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 display: flex;
-justify-content: space-between;
+justify-content: center;
 align-items: center;
 z-index: 1000;
-padding: 0 20px;
-box-sizing: border-box;
 }
 
 .app-title {
 font-size: 1.2rem;
 font-weight: bold;
-color: var(--qcda-text-main);
-cursor: pointer;
 margin: 0;
+color: var(--qcda-text-main);
+cursor: pointer; /* クリック可能であることを示す */
 }
 
-/* Hamburger Menu Button */
+/* ハンバーガーボタン /
 .hamburger-btn {
-background: none;
+position: absolute;
+right: 15px;
+top: 50%;
+transform: translateY(-50%);
+width: 30px;
+height: 24px;
+background: transparent;
 border: none;
 cursor: pointer;
-padding: 10px;
-display: flex;
-flex-direction: column;
-justify-content: space-around;
-height: 24px;
-width: 30px;
-z-index: 1002;
+padding: 0;
+z-index: 1002; / メニューより上に */
 }
 
 .hamburger-btn span {
 display: block;
 width: 100%;
-height: 2px;
+height: 3px;
 background-color: var(--qcda-text-main);
-transition: all 0.3s;
+border-radius: 3px;
+position: absolute;
+left: 0;
+transition: 0.3s;
+}
+
+.hamburger-btn span:nth-child(1) { top: 0; }
+.hamburger-btn span:nth-child(2) { top: 10px; }
+.hamburger-btn span:nth-child(3) { bottom: 0; }
+
+/* ハンバーガーメニューがアクティブな時の×印 /
+.hamburger-menu.active ~ .hamburger-btn span:nth-child(1), / common.jsの構造に合わせて兄弟要素からの指定等も考慮しつつ、ここではJS側でクラス操作するためシンプルに */
+header:has(~ .hamburger-menu.active) .hamburger-btn span:nth-child(1) {
+top: 10px;
+transform: rotate(45deg);
+}
+header:has(~ .hamburger-menu.active) .hamburger-btn span:nth-child(2) {
+opacity: 0;
+}
+header:has(~ .hamburger-menu.active) .hamburger-btn span:nth-child(3) {
+bottom: 11px;
+transform: rotate(-45deg);
 }
 
 /* Hamburger Menu Overlay (Slide from right) /
 .hamburger-menu {
 position: fixed;
 top: 0;
-right: -100%; / 初期状態は画面外 */
+right: -250px; / ★修正: -100% から -250px (widthと同じ値) に変更し確実に隠す /
 width: 250px;
 height: 100vh;
 background-color: var(--qcda-white);
@@ -99,12 +171,42 @@ z-index: 1001;
 padding-top: var(--header-height);
 box-sizing: border-box;
 overflow-y: auto;
+visibility: hidden; / ★追加: 画面外にある時は完全に不可視・操作不可にする */
 }
 
 .hamburger-menu.active {
 right: 0;
+visibility: visible; /* ★追加: active時に可視化する */
 }
 
+.menu-list {
+padding: 20px 0;
+}
+
+.menu-item {
+display: block;
+padding: 15px 20px;
+font-size: 1rem;
+color: var(--qcda-text-main);
+border-bottom: 1px solid #f0f0f0;
+}
+
+.menu-item.small-light {
+font-size: 0.85rem;
+color: var(--qcda-text-light);
+padding: 10px 20px 10px 40px; /* 1段落下げる */
+border-bottom: none;
+}
+
+.version-text {
+font-size: 0.8rem;
+color: #aaa;
+padding: 20px;
+text-align: right;
+border-bottom: none;
+}
+
+/* 背景を暗くするオーバーレイ */
 .menu-overlay {
 position: fixed;
 top: 0;
@@ -112,110 +214,33 @@ left: 0;
 width: 100%;
 height: 100vh;
 background-color: rgba(0,0,0,0.5);
-display: none;
 z-index: 1000;
+opacity: 0;
+visibility: hidden;
+transition: 0.3s;
 }
 
 .menu-overlay.active {
-display: block;
+opacity: 1;
+visibility: visible;
 }
 
-.menu-list {
-list-style: none;
-padding: 0;
-margin: 0;
-}
-
-.menu-item {
-display: block;
-padding: 15px 20px;
-border-bottom: 1px solid var(--qcda-border);
-color: var(--qcda-text-main);
-font-size: 1rem;
-}
-
-.menu-item:hover {
-background-color: var(--qcda-bg-color);
-}
-
-.menu-item.small-light {
-font-size: 0.8rem;
-color: var(--qcda-text-light);
-border-bottom: none;
-padding: 8px 20px 8px 30px; /* 段落下げ */
-}
-
-.menu-item.version-text {
-font-size: 0.8rem;
-color: var(--qcda-text-light);
-border-bottom: none;
-text-align: center;
-padding-top: 20px;
-cursor: default;
-}
-
-.menu-item.version-text:hover {
-background-color: transparent;
-}
-
-/* Layout */
-main {
-flex: 1;
-padding: calc(var(--header-height) + 20px) 15px 20px;
-max-width: 800px;
-margin: 0 auto;
-width: 100%;
-box-sizing: border-box;
-}
-
-/* Footer */
+/* --- フッター --- */
 footer {
 text-align: center;
 padding: 20px;
-background-color: var(--qcda-white);
-border-top: 1px solid var(--qcda-border);
-font-size: 0.8rem;
+font-size: 0.85rem;
 color: var(--qcda-text-light);
-margin-top: auto;
+background-color: transparent;
 }
-
 .footer-links {
 margin-bottom: 10px;
 }
-
 .footer-links a {
 color: var(--qcda-text-light);
-margin: 0 10px;
+margin: 0 5px;
 }
 
-/* UI Components */
-.card {
-background: var(--qcda-white);
-border-radius: 8px;
-padding: 20px;
-box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-margin-bottom: 20px;
-}
-
-.btn {
-display: inline-block;
-padding: 12px 24px;
-background-color: var(--qcda-primary);
-color: var(--qcda-white);
-border: none;
-border-radius: 6px;
-font-size: 1rem;
-cursor: pointer;
-text-align: center;
-transition: background-color 0.2s;
-width: 100%;
-box-sizing: border-box;
-}
-
-.btn:hover {
-background-color: var(--qcda-primary-hover);
-}
-
-/* Utilities */
+/* --- ユーティリティ --- */
 .text-center { text-align: center; }
 .hidden { display: none !important; }
